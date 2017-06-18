@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block body %}
+    {% block content %}
+    {% endblock %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 col-md-offset-4">
+                <form method=POST action="{{ url_for('register') }}">
+                    <div class="form-group">
+                        <label for="input-email">Email</label>
+                        <input type="text" name="email" class="form-control" id="input-email" placeholder="Enter email"
+                               value="{{ request.form.email }}">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Register</button>
+                </form>
+                <br>
+                <div>
+                    Have an account? <a href="{{ url_for('index') }}">log in</a>.
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+

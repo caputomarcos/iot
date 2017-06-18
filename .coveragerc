@@ -1,0 +1,14 @@
+# .coveragerc
+[run]
+omit = .idea/*, \
+    env/*, \
+    static/*, \
+    templates/*
+
+concurrency = multiprocessing
+parallel = True
+
+data_file = .cache/.coverage
+
+[html]
+directory= .cache/html-coverage
