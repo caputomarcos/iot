@@ -10,9 +10,9 @@ from fabric.context_managers import settings
 from fabric.operations import run, sudo
 from fabric.state import env
 from flask import Flask, render_template, jsonify, json, request, redirect, session, url_for, send_file, flash
-
 from pymongo import MongoClient
 
+# TODO add flask_ipblock
 # from flask_ipblock import IPBlock
 # from flask_ipblock.documents import IPNetwork
 
@@ -27,6 +27,16 @@ app.config.update(
 client = MongoClient(os.environ.get('MONGODB_URI', None))
 db = client.get_default_database()
 
+device_detail = {
+    'device': None,
+    'ip': None,
+    'username': None,
+    'password': None,
+    'port': None,
+    'id': None
+
+}
+
 
 def authenticate(otp, u):
     try:
@@ -34,7 +44,7 @@ def authenticate(otp, u):
         t = pyotp.TOTP(u)
     except ValueError:
         return False
-    return t.verify(p)
+    return t.verify(str(p))
 
 
 def check_token(u):
@@ -42,11 +52,12 @@ def check_token(u):
     def totp(*args, **kwargs):
         otp = request.json['info']['token']
         key = session['key']
-        if otp and key:
-            if not authenticate(otp, key):
-                flash('Error')
-                return redirect(url_for('update_device', next=request.url))
-            return u(*args, **kwargs)
+        otp_auth = authenticate(otp, key) if otp and key else None
+        if otp_auth:
+            flash('Error')
+            return redirect(url_for('update_device', next=request.url))
+        return u(*args, **kwargs)
+
     return totp
 
 
@@ -56,6 +67,7 @@ def login_required(f):
         if not session:
             return redirect(url_for('login', next=request.url))
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -65,6 +77,7 @@ def logout_required(f):
         if session:
             return redirect(url_for('index', next=request.url))
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -111,7 +124,6 @@ def register():
         if existing_user is None:
 
             if db.users.insert({'email': request.form['email'], 'key': pyotp.random_base32()}):
-
                 user = partial(type, "user", ())(db.users.find_one({'email': request.form['email']}))
 
                 session.permanent = True
@@ -153,14 +165,12 @@ def get_device():
     try:
         device_id = request.json['id']
         device = db.Devices.find_one({'_id': ObjectId(device_id)})
-        device_detail = {
-            'device': device['device'],
-            'ip': device['ip'],
-            'username': device['username'],
-            'password': device['password'],
-            'port': device['port'],
-            'id': str(device['_id'])
-        }
+        device_detail['device'] = device['device']
+        device_detail['ip'] = device['ip']
+        device_detail['username'] = device['username']
+        device_detail['password'] = device['password']
+        device_detail['port'] = device['port']
+        device_detail['id'] = str(device['_id'])
         return json.dumps(device_detail)
     except Exception as e:
         return str(e)
@@ -205,15 +215,13 @@ def get_device_list():
         devices = db.Devices.find()
         device_list = []
         for device in devices:
-            device_item = {
-                'device': device['device'],
-                'ip': device['ip'],
-                'username': device['username'],
-                'password': device['password'],
-                'port': device['port'],
-                'id': str(device['_id'])
-            }
-            device_list.append(device_item)
+            device_detail['device'] = device['device']
+            device_detail['ip'] = device['ip']
+            device_detail['username'] = device['username']
+            device_detail['password'] = device['password']
+            device_detail['port'] = device['port']
+            device_detail['id'] = str(device['_id'])
+            device_list.append(device_detail)
     except Exception as e:
         return str(e)
     return json.dumps(device_list)
@@ -269,16 +277,19 @@ def qr(email):
 
 @app.errorhandler(400)
 def page_not_found(e):
+    app.logger.erro(e)
     return render_template('400.html'), 400
 
 
 @app.errorhandler(404)
 def page_not_found(e):
+    app.logger.erro(e)
     return render_template('404.html'), 404
 
 
 @app.errorhandler(405)
 def page_not_found(e):
+    app.logger.erro(e)
     return render_template('405.html'), 405
 
 
