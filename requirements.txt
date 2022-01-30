@@ -19,7 +19,7 @@ MarkupSafe==1.0
 mongoengine==0.13.0
 netaddr==0.7.19
 olefile==0.44
-paramiko==2.2.1
+paramiko==2.2.3
 Pillow==4.1.1
 pyasn1==0.2.3
 pycparser==2.17
